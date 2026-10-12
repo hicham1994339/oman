@@ -1,0 +1,748 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111111">
+  <title>HAMDAD BOOKING | حجز المواعيد</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+      --bg: #101114;
+      --panel: #1b1d22;
+      --gold: #d6ad60;
+      --text: #f7f4ee;
+      --muted: #b4b5bc;
+      --border: #34363d;
+      --danger: #ff7373;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, Tahoma, sans-serif;
+      line-height: 1.7;
+    }
+
+    header {
+      background: #090a0c;
+      border-bottom: 1px solid var(--border);
+      padding: 20px;
+    }
+
+    .nav, main, footer {
+      max-width: 1050px;
+      margin: auto;
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      color: var(--gold);
+      font-size: 23px;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    main { padding: 24px 16px 50px; }
+
+    .hero {
+      padding: 32px 10px;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: clamp(28px, 5vw, 46px);
+      margin: 0 0 12px;
+    }
+
+    .hero p, .muted { color: var(--muted); }
+
+    .gold { color: var(--gold); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+    }
+
+    .panel, .service, .booking {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      min-width: 0;
+    }
+
+    h2 { font-size: 23px; margin-top: 0; }
+
+    label {
+      display: block;
+      margin: 12px 0 5px;
+      font-size: 14px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      background: #111216;
+      border: 1px solid #41434b;
+      border-radius: 9px;
+      color: white;
+      font: inherit;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: 2px solid var(--gold);
+      border-color: var(--gold);
+    }
+
+    button {
+      cursor: pointer;
+      border: 0;
+      border-radius: 9px;
+      padding: 11px 16px;
+      font: inherit;
+      font-weight: bold;
+    }
+
+    .primary {
+      background: var(--gold);
+      color: #17120a;
+    }
+
+    .secondary {
+      background: #30323a;
+      color: white;
+      border: 1px solid #474951;
+    }
+
+    .danger {
+      background: #512727;
+      color: white;
+    }
+
+    button:disabled {
+      opacity: .55;
+      cursor: wait;
+    }
+
+    .full { width: 100%; margin-top: 16px; }
+
+    .service h3 { margin: 0 0 8px; }
+
+    .price {
+      font-size: 24px;
+      font-weight: bold;
+      color: var(--gold);
+    }
+
+    .hidden { display: none !important; }
+
+    .message {
+      margin: 16px 0;
+      padding: 12px;
+      border-radius: 9px;
+      background: #25272d;
+      overflow-wrap: anywhere;
+    }
+
+    .message.error { color: #ffaaaa; }
+    .message.success { color: #a6efbf; }
+
+    .section { margin-top: 35px; }
+
+    .booking { margin: 12px 0; }
+
+    .booking p { margin: 5px 0; }
+
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .status {
+      display: inline-block;
+      border: 1px solid var(--border);
+      border-radius: 30px;
+      padding: 2px 10px;
+      font-size: 12px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 25px;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+    }
+
+    @media (max-width: 500px) {
+      header { padding: 14px; }
+      main { padding-inline: 12px; }
+      .panel, .service, .booking { padding: 15px; }
+    }
+  </style>
+</head>
+
+<body>
+<header>
+  <div class="nav">
+    <div class="brand">HAMDAD BOOKING</div>
+    <button class="secondary" id="adminToggle">
+      لوحة الإدارة
+    </button>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <p class="gold">أناقة • تنظيم • سهولة</p>
+    <h1>احجز موعدك بكل سهولة</h1>
+    <p>اختر الخدمة المناسبة لك وحدد موعدك مع صالون الحلاقة.</p>
+  </section>
+
+  <div id="globalMessage" class="message hidden" role="status"></div>
+
+  <section class="section">
+    <h2>خدماتنا</h2>
+    <div id="servicesList" class="grid">
+      <p class="muted">جارٍ تحميل الخدمات...</p>
+    </div>
+  </section>
+
+  <section class="section panel" id="bookingSection">
+    <h2>احجز موعدًا</h2>
+    <p class="muted">املأ بياناتك واختر الخدمة والتاريخ والوقت.</p>
+
+    <form id="bookingForm">
+      <label for="customerName">الاسم الكامل</label>
+      <input id="customerName" maxlength="100" required
+        autocomplete="name" placeholder="اكتب اسمك">
+
+      <label for="phone">رقم الهاتف</label>
+      <input id="phone" maxlength="30" required
+        autocomplete="tel" type="tel" placeholder="+971...">
+
+      <label for="serviceSelect">الخدمة</label>
+      <select id="serviceSelect" required>
+        <option value="">اختر الخدمة</option>
+      </select>
+
+      <label for="appointmentDate">تاريخ الموعد</label>
+      <input id="appointmentDate" type="date" required>
+
+      <label for="appointmentTime">وقت الموعد</label>
+      <select id="appointmentTime" required>
+        <option value="">اختر الوقت</option>
+      </select>
+
+      <label for="notes">ملاحظات (اختياري)</label>
+      <textarea id="notes" rows="3" maxlength="500"
+        placeholder="أي تفاصيل إضافية"></textarea>
+
+      <button class="primary full" id="bookButton" type="submit">
+        تأكيد الحجز
+      </button>
+    </form>
+  </section>
+
+  <section class="section panel hidden" id="adminSection">
+    <div class="row">
+      <h2>لوحة الإدارة</h2>
+      <button id="logoutButton" class="secondary hidden">تسجيل الخروج</button>
+    </div>
+
+    <div id="loginArea">
+      <p class="muted">
+        سجّل الدخول بحساب الإدارة الذي أنشأته في Supabase.
+      </p>
+      <form id="loginForm">
+        <label for="adminEmail">البريد الإلكتروني</label>
+        <input id="adminEmail" type="email" required autocomplete="username">
+
+        <label for="adminPassword">كلمة المرور</label>
+        <input id="adminPassword" type="password" required
+          autocomplete="current-password">
+
+        <button class="primary full" type="submit">تسجيل الدخول</button>
+      </form>
+    </div>
+
+    <div id="adminArea" class="hidden">
+      <h3>إضافة خدمة جديدة</h3>
+      <form id="serviceForm">
+        <label for="newServiceName">اسم الخدمة</label>
+        <input id="newServiceName" maxlength="100" required>
+
+        <label for="newServiceDescription">الوصف</label>
+        <input id="newServiceDescription" maxlength="300">
+
+        <label for="newServicePrice">السعر</label>
+        <input id="newServicePrice" type="number" min="0"
+          step="0.01" required>
+
+        <label for="newServiceDuration">المدة بالدقائق</label>
+        <input id="newServiceDuration" type="number"
+          min="1" max="480" value="30" required>
+
+        <button class="primary full" type="submit">إضافة الخدمة</button>
+      </form>
+
+      <div class="section">
+        <h3>الخدمات الحالية</h3>
+        <div id="adminServices"></div>
+      </div>
+
+      <div class="section">
+        <div class="row">
+          <h3>حجوزات الزبائن</h3>
+          <button class="secondary" id="refreshBookings">تحديث</button>
+        </div>
+        <div id="bookingsList">سجّل الدخول لعرض الحجوزات.</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  HAMDAD BOOKING — نظام حجز المواعيد
+</footer>
+
+<script>
+(() => {
+  "use strict";
+
+  // ضع بيانات مشروع Supabase هنا.
+  // استخدم Project URL ومفتاح publishable/anon العام فقط.
+  const SUPABASE_URL = "PASTE_YOUR_SUPABASE_PROJECT_URL";
+  const SUPABASE_KEY = "PASTE_YOUR_SUPABASE_PUBLISHABLE_KEY";
+
+  const $ = (id) => document.getElementById(id);
+
+  const globalMessage = $("globalMessage");
+  let db = null;
+  let services = [];
+  let currentUser = null;
+
+  function showMessage(message, type = "") {
+    globalMessage.textContent = message;
+    globalMessage.className = "message " + type;
+  }
+
+  function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    })[char]);
+  }
+
+  function money(value) {
+    return new Intl.NumberFormat("ar", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    }).format(Number(value));
+  }
+
+  function localDateString(date = new Date()) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
+  function setupTimes() {
+    const select = $("appointmentTime");
+    select.innerHTML = '<option value="">اختر الوقت</option>';
+
+    // أوقات تجريبية؛ عدّلها حسب دوام الصالون.
+    for (let minutes = 9 * 60; minutes <= 20 * 60; minutes += 30) {
+      const h = String(Math.floor(minutes / 60)).padStart(2, "0");
+      const m = String(minutes % 60).padStart(2, "0");
+      const value = `${h}:${m}:00`;
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = `${h}:${m}`;
+      select.appendChild(option);
+    }
+  }
+
+  async function loadServices() {
+    const { data, error } = await db
+      .from("services")
+      .select("id,name,description,price,duration_minutes")
+      .eq("active", true)
+      .order("id");
+
+    if (error) throw error;
+    services = data || [];
+
+    $("servicesList").replaceChildren();
+    $("serviceSelect").innerHTML =
+      '<option value="">اختر الخدمة</option>';
+
+    if (!services.length) {
+      $("servicesList").textContent = "لا توجد خدمات متاحة حاليًا.";
+      return;
+    }
+
+    services.forEach((service) => {
+      const card = document.createElement("article");
+      card.className = "service";
+      card.innerHTML = `
+        <h3>${escapeHTML(service.name)}</h3>
+        <p class="muted">${escapeHTML(service.description || "")}</p>
+        <p>المدة: ${Number(service.duration_minutes)} دقيقة</p>
+        <div class="price">${money(service.price)}</div>
+      `;
+      $("servicesList").appendChild(card);
+
+      const option = document.createElement("option");
+      option.value = String(service.id);
+      option.textContent = `${service.name} — ${money(service.price)}`;
+      $("serviceSelect").appendChild(option);
+    });
+  }
+
+  async function loadAdminServices() {
+    const { data, error } = await db
+      .from("services")
+      .select("*")
+      .order("id");
+
+    if (error) throw error;
+
+    const container = $("adminServices");
+    container.replaceChildren();
+
+    (data || []).forEach((service) => {
+      const item = document.createElement("div");
+      item.className = "booking";
+
+      const title = document.createElement("strong");
+      title.textContent =
+        `${service.name} — ${money(service.price)}`;
+
+      const toggle = document.createElement("button");
+      toggle.className = "secondary";
+      toggle.textContent = service.active ? "إخفاء الخدمة" : "تفعيل الخدمة";
+
+      toggle.addEventListener("click", async () => {
+        toggle.disabled = true;
+
+        const { error } = await db
+          .from("services")
+          .update({ active: !service.active })
+          .eq("id", service.id);
+
+        if (error) {
+          showMessage("تعذر تعديل الخدمة: " + error.message, "error");
+        } else {
+          await loadServices();
+          await loadAdminServices();
+          showMessage("تم تحديث الخدمة.", "success");
+        }
+      });
+
+      item.append(title, document.createElement("br"), toggle);
+      container.appendChild(item);
+    });
+  }
+
+  const statusNames = {
+    pending: "بانتظار التأكيد",
+    confirmed: "مؤكد",
+    cancelled: "ملغى"
+  };
+
+  async function loadBookings() {
+    $("bookingsList").textContent = "جارٍ تحميل الحجوزات...";
+
+    const { data, error } = await db
+      .from("bookings")
+      .select("id,customer_name,phone,service_id,appointment_date,appointment_time,notes,status,created_at,services(name,price)")
+      .order("appointment_date", { ascending: true })
+      .order("appointment_time", { ascending: true });
+
+    if (error) throw error;
+
+    const container = $("bookingsList");
+    container.replaceChildren();
+
+    if (!data || !data.length) {
+      container.textContent = "لا توجد حجوزات حتى الآن.";
+      return;
+    }
+
+    data.forEach((booking) => {
+      const item = document.createElement("article");
+      item.className = "booking";
+
+      const title = document.createElement("h3");
+      title.textContent = booking.customer_name;
+
+      const details = document.createElement("p");
+      details.textContent =
+        `الهاتف: ${booking.phone} | الخدمة: ${booking.services?.name || "غير متاحة"}`;
+
+      const date = document.createElement("p");
+      date.textContent =
+        `الموعد: ${booking.appointment_date} — ${String(booking.appointment_time).slice(0,5)}`;
+
+      const status = document.createElement("p");
+      status.textContent = "الحالة: " + (statusNames[booking.status] || booking.status);
+
+      item.append(title, details, date, status);
+
+      if (booking.notes) {
+        const notes = document.createElement("p");
+        notes.textContent = "ملاحظات: " + booking.notes;
+        item.appendChild(notes);
+      }
+
+      if (booking.status !== "cancelled") {
+        const actions = document.createElement("div");
+        actions.className = "row";
+
+        const confirm = document.createElement("button");
+        confirm.className = "primary";
+        confirm.textContent = "تأكيد الموعد";
+        confirm.addEventListener("click", () =>
+          updateBookingStatus(booking.id, "confirmed"));
+
+        const cancel = document.createElement("button");
+        cancel.className = "danger";
+        cancel.textContent = "إلغاء الحجز";
+        cancel.addEventListener("click", () =>
+          updateBookingStatus(booking.id, "cancelled"));
+
+        actions.append(confirm, cancel);
+        item.appendChild(actions);
+      }
+
+      container.appendChild(item);
+    });
+  }
+
+  async function updateBookingStatus(id, status) {
+    const { error } = await db
+      .from("bookings")
+      .update({ status })
+      .eq("id", id);
+
+    if (error) {
+      showMessage("تعذر تحديث الحجز: " + error.message, "error");
+      return;
+    }
+
+    showMessage("تم تحديث حالة الحجز.", "success");
+    await loadBookings();
+  }
+
+  async function refreshAdmin() {
+    const { data: { session }, error } = await db.auth.getSession();
+    if (error) throw error;
+
+    currentUser = session?.user || null;
+
+    $("loginArea").classList.toggle("hidden", !!currentUser);
+    $("adminArea").classList.toggle("hidden", !currentUser);
+    $("logoutButton").classList.toggle("hidden", !currentUser);
+
+    if (currentUser) {
+      await Promise.all([
+        loadAdminServices(),
+        loadBookings()
+      ]);
+    }
+  }
+
+  $("adminToggle").addEventListener("click", () => {
+    $("adminSection").classList.toggle("hidden");
+    $("adminSection").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  $("bookingForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const button = $("bookButton");
+    button.disabled = true;
+
+    try {
+      const name = $("customerName").value.trim();
+      const phone = $("phone").value.trim();
+      const serviceId = Number($("serviceSelect").value);
+      const date = $("appointmentDate").value;
+      const time = $("appointmentTime").value;
+      const notes = $("notes").value.trim();
+
+      if (!name || !phone || !serviceId || !date || !time) {
+        throw new Error("يرجى ملء جميع الحقول المطلوبة.");
+      }
+
+      if (date < localDateString()) {
+        throw new Error("لا يمكن حجز موعد في الماضي.");
+      }
+
+      const chosen = services.find(s => Number(s.id) === serviceId);
+      if (!chosen) throw new Error("الخدمة المختارة غير متاحة.");
+
+      const { error } = await db.from("bookings").insert({
+        customer_name: name,
+        phone,
+        service_id: serviceId,
+        appointment_date: date,
+        appointment_time: time,
+        notes,
+        status: "pending"
+      });
+
+      if (error) {
+        if (error.code === "23505") {
+          throw new Error("هذا الوقت محجوز بالفعل. اختر وقتًا آخر.");
+        }
+        throw error;
+      }
+
+      $("bookingForm").reset();
+      $("appointmentDate").min = localDateString();
+      showMessage(
+        "تم تسجيل طلب الحجز بنجاح. سيؤكد الصالون موعدك عند مراجعته.",
+        "success"
+      );
+    } catch (error) {
+      showMessage(error.message || "حدث خطأ أثناء الحجز.", "error");
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  $("loginForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    try {
+      const { error } = await db.auth.signInWithPassword({
+        email: $("adminEmail").value.trim(),
+        password: $("adminPassword").value
+      });
+
+      if (error) throw error;
+
+      await refreshAdmin();
+      showMessage("تم تسجيل الدخول.", "success");
+    } catch (error) {
+      showMessage("تعذر تسجيل الدخول. تحقق من بيانات الحساب.", "error");
+    }
+  });
+
+  $("logoutButton").addEventListener("click", async () => {
+    const { error } = await db.auth.signOut();
+    if (error) {
+      showMessage("تعذر تسجيل الخروج.", "error");
+      return;
+    }
+    await refreshAdmin();
+    showMessage("تم تسجيل الخروج.", "success");
+  });
+
+  $("serviceForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    try {
+      const name = $("newServiceName").value.trim();
+      const description = $("newServiceDescription").value.trim();
+      const price = Number($("newServicePrice").value);
+      const duration = Number($("newServiceDuration").value);
+
+      if (!name || price < 0 || duration < 1) {
+        throw new Error("تحقق من اسم الخدمة والسعر والمدة.");
+      }
+
+      const { error } = await db.from("services").insert({
+        name,
+        description,
+        price,
+        duration_minutes: duration,
+        active: true
+      });
+
+      if (error) throw error;
+
+      $("serviceForm").reset();
+      $("newServiceDuration").value = "30";
+      await loadServices();
+      await loadAdminServices();
+      showMessage("تمت إضافة الخدمة.", "success");
+    } catch (error) {
+      showMessage(error.message || "تعذرت إضافة الخدمة.", "error");
+    }
+  });
+
+  $("refreshBookings").addEventListener("click", async () => {
+    try {
+      await loadBookings();
+      showMessage("تم تحديث الحجوزات.", "success");
+    } catch (error) {
+      showMessage("تعذر تحميل الحجوزات.", "error");
+    }
+  });
+
+  async function start() {
+    $("appointmentDate").min = localDateString();
+    setupTimes();
+
+    if (
+      SUPABASE_URL.startsWith("PASTE_") ||
+      SUPABASE_KEY.startsWith("PASTE_")
+    ) {
+      $("servicesList").textContent =
+        "يجب أولًا إدخال بيانات مشروع Supabase داخل الكود.";
+      showMessage(
+        "أكمل إعداد Supabase ثم أضف رابط المشروع والمفتاح العام في أعلى الكود.",
+        "error"
+      );
+      return;
+    }
+
+    db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    try {
+      await loadServices();
+      await refreshAdmin();
+
+      db.auth.onAuthStateChange(() => {
+        setTimeout(() => {
+          refreshAdmin().catch(() =>
+            showMessage("تعذر تحديث حالة تسجيل الدخول.", "error")
+          );
+        }, 0);
+      });
+    } catch (error) {
+      showMessage(
+        "تعذر الاتصال بقاعدة البيانات. تحقق من الإعدادات والصلاحيات.",
+        "error"
+      );
+    }
+  }
+
+  start();
+})();
+</script>
+</body>
+</html>
